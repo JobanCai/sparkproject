@@ -20,7 +20,7 @@ public interface Constants {
   String JDBC_USER_PROD = "jdbc.user.prod";
   String JDBC_PASSWORD_PROD = "jdbc.password.prod";
   //sparksession 整合了SQLContext和HiveContext
-//  String SPARK_LOCAL = "spark.local";
+  String SPARK_LOCAL = "spark.local";
   String SPARK_LOCAL_TASKID_SESSION = "spark.local.taskid.session";
   String SPARK_LOCAL_TASKID_PAGE = "spark.local.taskid.page";
   String SPARK_LOCAL_TASKID_PRODUCT = "spark.local.taskid.product";

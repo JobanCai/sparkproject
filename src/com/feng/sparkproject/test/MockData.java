@@ -42,7 +42,7 @@ public class MockData {
 		Random random = new Random();
 		
 		//10w
-		for(int i = 0; i < 1; i++) {
+		for(int i = 0; i < 100; i++) {
 			long userid = random.nextInt(100);    
 			
 			for(int j = 0; j < 10; j++) {
@@ -51,7 +51,7 @@ public class MockData {
 				
 				Long clickCategoryId = null;
 				  
-				for(int k = 0; k < random.nextInt(1); k++) {
+				for(int k = 0; k < random.nextInt(100); k++) {
 					long pageid = random.nextInt(10);    
 					String actionTime = baseActionTime + ":" + StringUtils.fulfuill(String.valueOf(random.nextInt(59))) + ":" + StringUtils.fulfuill(String.valueOf(random.nextInt(59)));
 					String searchKeyword = null;
@@ -171,6 +171,7 @@ public class MockData {
 				DataTypes.createStructField("extend_info", DataTypes.StringType, true)));
 		
 		Dataset<Row> df3 = sparkSession.createDataFrame(rowsRDD, schema3);
+		df3.show();
 		System.out.println(df3.take(1).toString());
 		
 		df3.createOrReplaceTempView("product_info"); 
