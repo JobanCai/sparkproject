@@ -59,6 +59,7 @@ public interface Constants {
   String TIME_PERIOD_10m_30m = "10m_30m";
   String TIME_PERIOD_30m = "30m";
 
+  //访问步长
   String STEP_PERIOD_1_3 = "1_3";
   String STEP_PERIOD_4_6 = "4_6";
   String STEP_PERIOD_7_9 = "7_9";

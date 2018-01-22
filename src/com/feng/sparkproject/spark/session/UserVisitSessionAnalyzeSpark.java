@@ -46,6 +46,7 @@ public class UserVisitSessionAnalyzeSpark {
             // spark sql元数据仓库地址
             .config("spark.sql.warehouse.dir", "E:\\scale\\sparkSQLDemo1").enableHiveSupport()
             .getOrCreate();
+    
     mockData(spark);
 
     ITaskDAO taskDAO = DAOFactory.getTaskDAO();
@@ -58,6 +59,8 @@ public class UserVisitSessionAnalyzeSpark {
     JSONObject taskParm = JSONObject.parseObject(task.getTaskParam());
     JavaRDD<Row> actionRDD = SparkUtils.getActionRDDByDateRange(spark, taskParm);
     JavaPairRDD<String, Row> sessionid2actionRDD = getSessionid2ActionRDD(actionRDD);
+    JavaPairRDD<String, String> sessionid2AggrInfoRDD = 
+        aggregateBySession(spark, sessionid2actionRDD);
     spark.close();
   }
 
@@ -90,7 +93,7 @@ public class UserVisitSessionAnalyzeSpark {
    * 对行为数据按session粒度进行聚合
    * 
    * @param actionRDD 行为数据RDD
-   * @return session粒度聚合数据
+   * @return session粒度聚合数据(sessionid,"sessionid|searchKeywords|clickCategoryIds|visitLength|stepLength|startTime|age|professional|city|sex")
    */
   private static JavaPairRDD<String, String> aggregateBySession(SparkSession spark,
       JavaPairRDD<String, Row> sessinoid2actionRDD) {
