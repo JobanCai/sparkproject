@@ -2,6 +2,7 @@ package com.feng.sparkproject.test;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.feng.sparkproject.util.StringUtils;
 
 /**
  * fastjson测试类
@@ -17,5 +18,4 @@ public class FastjsonTest {
 		JSONObject jsonObject = jsonArray.getJSONObject(0);
 		System.out.println(jsonObject.getString("学生"));   
 	}
-	
 }

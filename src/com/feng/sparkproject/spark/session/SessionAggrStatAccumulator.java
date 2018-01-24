@@ -29,7 +29,7 @@ public class SessionAggrStatAccumulator extends AccumulatorV2<String, String> {
       // 从tempResult中，提取field对应的值，并累加
       String oldValue = StringUtils.getFieldFromConcatString(tempResult, "\\|", field);
       if (oldValue != null) {
-        String newValue = (Integer.valueOf(oldValue) + 1) + "";
+        String newValue = (Long.valueOf(oldValue) + 1) + "";
         newResult = StringUtils.setFieldInConcatString(tempResult, "\\|", field, String.valueOf(newValue));
       }
       result = newResult;
@@ -58,7 +58,7 @@ public class SessionAggrStatAccumulator extends AccumulatorV2<String, String> {
   @Override
   public void merge(AccumulatorV2<String, String> v2) {
     if (v2 instanceof SessionAggrStatAccumulator) {
-      StringUtils.mergeResultString(this.result,((SessionAggrStatAccumulator) v2).result,"\\|");
+      this.result = StringUtils.mergeResultString(this.result,((SessionAggrStatAccumulator) v2).result,"\\|");
     }
   }
 

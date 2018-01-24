@@ -1,7 +1,5 @@
 package com.feng.sparkproject.util;
 
-import org.apache.hadoop.hive.ql.parse.HiveParser_IdentifiersParser.intervalLiteral_return;
-
 /**
  * @Description: 字符串工具类
  * @author feng
@@ -89,7 +87,7 @@ public class StringUtils {
       String fieldName = s1Fields[i].split("=")[0];
       String s1FieldValue = s1Fields[i].split("=")[1];
       String s2FieldValue = s2Fields[i].split("=")[1];
-      int newValue = Integer.valueOf(s1FieldValue)+Integer.valueOf(s2FieldValue);
+      long newValue = Long.valueOf(s1FieldValue)+Long.valueOf(s2FieldValue);
       String concatField = fieldName + "=" + newValue;
       buffer.append(concatField);
       if (i<s1Fields.length-1) {
