@@ -61,7 +61,10 @@ public class SparkUtils {
 //				+ "and session_id not in('','','')"
 		
 		 Dataset<Row> actionDF = sparkSession.sql(sql);
-		
+		 actionDF.take(1);
+//		 actionDF.show();
+//		 System.out.println("--------------------------------------------------------------------");
+		 System.out.println("符合日期统计count:"+actionDF.count());
 		/**
 		 * 这里就很有可能发生上面说的问题
 		 * 比如说，Spark SQl默认就给第一个stage设置了20个task，但是根据你的数据量以及算法的复杂度

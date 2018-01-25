@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.hive.ql.parse.HiveParser_IdentifiersParser.nullCondition_return;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -64,8 +65,8 @@ public class UserVisitSessionAnalyzeSpark {
     mockData(spark);
 
     ITaskDAO taskDAO = DAOFactory.getTaskDAO();
-    //测试
-    args = new String[]{"2"};  
+    // 测试
+    args = new String[] {"2"};
     long taskid = ParamUtils.getTaskIdFromArgs(args);
     Task task = taskDAO.findById(taskid);
     if (task == null) {
@@ -76,28 +77,37 @@ public class UserVisitSessionAnalyzeSpark {
     // 获取指定日期范围内的用户行为数据RDD
     JavaRDD<Row> actionRDD = SparkUtils.getActionRDDByDateRange(spark, taskParm);
     JavaPairRDD<String, Row> sessionid2actionRDD = getSessionid2ActionRDD(actionRDD);
+    System.out.println("sessionid2actionRDD count:" + sessionid2actionRDD.count());
+    sessionid2actionRDD.take(20).forEach(tuple -> {
+      System.out.println("aaaaa:" + tuple._1 + ":" + tuple._2);
+    });
+
     // <sessionid,(sessionid,<action userinfo>>)
     JavaPairRDD<String, String> sessionid2AggrInfoRDD =
         aggregateBySession(spark, sessionid2actionRDD);
 
-    AccumulatorV2<String, String> sessionAggrStatAccumulator = new SessionAggrStatAccumulator();
-    spark.sparkContext().register(sessionAggrStatAccumulator);
-
-
-    // 过滤并统计
-    JavaPairRDD<String, String> filteredSessionid2AggrInfoRDD =
-        filterSessionAndAggrStat(sessionid2AggrInfoRDD, taskParm, sessionAggrStatAccumulator);
-
-    // <sessionid,actioninfo>
-    JavaPairRDD<String, Row> sessionid2detailRDD =
-        getSessionid2detailRDD(filteredSessionid2AggrInfoRDD, sessionid2actionRDD);
-
-    // 随机抽取并入库
-    randomExtractSession(spark, task.getTaskid(), filteredSessionid2AggrInfoRDD,
-        sessionid2detailRDD);
-
-    // 计算出各个范围的session占比，并写入MySQL
-    calculateAndPersistAggrStat(sessionAggrStatAccumulator.value(), task.getTaskid());
+    sessionid2AggrInfoRDD.take(20).forEach(tuple -> {
+      System.out.println("sessionid2AggrInfoRDD:" + tuple._1 + ":" + tuple._2);
+    });
+    //
+    // AccumulatorV2<String, String> sessionAggrStatAccumulator = new SessionAggrStatAccumulator();
+    // spark.sparkContext().register(sessionAggrStatAccumulator);
+    //
+    //
+    // // 过滤并统计
+    // JavaPairRDD<String, String> filteredSessionid2AggrInfoRDD =
+    // filterSessionAndAggrStat(sessionid2AggrInfoRDD, taskParm, sessionAggrStatAccumulator);
+    //
+    // // <sessionid,actioninfo>
+    // JavaPairRDD<String, Row> sessionid2detailRDD =
+    // getSessionid2detailRDD(filteredSessionid2AggrInfoRDD, sessionid2actionRDD);
+    //
+    // // 随机抽取并入库
+    // randomExtractSession(spark, task.getTaskid(), filteredSessionid2AggrInfoRDD,
+    // sessionid2detailRDD);
+    //
+    // // 计算出各个范围的session占比，并写入MySQL
+    // calculateAndPersistAggrStat(sessionAggrStatAccumulator.value(), task.getTaskid());
     spark.close();
   }
 
@@ -577,9 +587,10 @@ public class UserVisitSessionAnalyzeSpark {
    */
   private static JavaPairRDD<String, String> aggregateBySession(SparkSession spark,
       JavaPairRDD<String, Row> sessinoid2actionRDD) {
+    // 对行为数据按session粒度进行分组
     JavaPairRDD<String, Iterable<Row>> sessionid2ActionsRDD = sessinoid2actionRDD.groupByKey();
 
-    // <userid,partAggrInfo(userid,<...>)
+    // 到此为止，获取的数据格式，如下：<userid,partAggrInfo(sessionid,searchKeywords,clickCategoryIds)>
     JavaPairRDD<Long, String> userid2PartAggrInfoRDD = sessionid2ActionsRDD.mapToPair(tuple -> {
       String sessionid = tuple._1;
       Iterator<Row> iterator = tuple._2.iterator();
@@ -604,6 +615,15 @@ public class UserVisitSessionAnalyzeSpark {
         }
         String searchKeyword = row.getString(5);
         Long clickCategoryId = row.getLong(6);
+
+        // 并不是每一行访问行为都有searchKeyword何clickCategoryId两个字段的
+        // 其实，只有搜索行为，是有searchKeyword字段的
+        // 只有点击品类的行为，是有clickCategoryId字段的
+        // 所以，任何一行行为数据，都不可能两个字段都有，所以数据是可能出现null值的
+
+        // 我们决定是否将搜索词或点击品类id拼接到字符串中去
+        // 首先要满足：不能是null值
+        // 其次，之前的字符串中还没有搜索词或者点击品类id
 
         if (StringUtils.isNotEmpty(searchKeyword)) {
           if (!searchKeywordsBuffer.toString().contains(searchKeyword)) {
@@ -643,7 +663,20 @@ public class UserVisitSessionAnalyzeSpark {
       // 计算session访问时长（秒）
       long visitLength = (endTime.getTime() - startTime.getTime()) / 1000;
 
-      // 聚合数据，用key=value|key=value格式拼接
+      // 我们返回的数据格式，即使<sessionid,partAggrInfo>
+      // 但是，这一步聚合完了以后，其实，我们是还需要将每一行数据，跟对应的用户信息进行聚合
+      // 问题就来了，如果是跟用户信息进行聚合的话，那么key，就不应该是sessionid
+      // 就应该是userid，才能够跟<userid,Row>格式的用户信息进行聚合
+      // 如果我们这里直接返回<sessionid,partAggrInfo>，还得再做一次mapToPair算子
+      // 将RDD映射成<userid,partAggrInfo>的格式，那么就多此一举
+
+      // 所以，我们这里其实可以直接，返回的数据格式，就是<userid,partAggrInfo>
+      // 然后跟用户信息join的时候，将partAggrInfo关联上userInfo
+      // 然后再直接将返回的Tuple的key设置成sessionid
+      // 最后的数据格式，还是<sessionid,fullAggrInfo>
+
+      // 聚合数据，用什么样的格式进行拼接？
+      // 我们这里统一定义，使用key=value|key=value
       String partAggrInfo =
           Constants.FIELD_SESSION_ID + "=" + sessionid + "|" + Constants.FIELD_SEARCH_KEYWORDS + "="
               + searchKeywords + "|" + Constants.FIELD_CLICK_CATEGORY_IDS + "=" + clickCategoryIds
@@ -658,9 +691,15 @@ public class UserVisitSessionAnalyzeSpark {
     String sql = "select * from user_info";
     JavaRDD<Row> userInfoRDD = spark.sql(sql).javaRDD();
 
-    // <userid,<id,name,age>>
     JavaPairRDD<Long, Row> userid2InfoRDD =
         userInfoRDD.mapToPair(row -> new Tuple2<Long, Row>(row.getLong(0), row));
+
+    /**
+     * 这里就可以说一下，比较适合采用reduce join转换为map join的方式
+     * 
+     * userid2PartAggrInfoRDD，可能数据量还是比较大，比如，可能在1千万数据 userid2InfoRDD，可能数据量还是比较小的，你的用户数量才10万用户
+     * 
+     */
 
     // 将session粒度聚合数据，与用户信息进行join
     JavaPairRDD<Long, Tuple2<String, Row>> userid2FullInfoRDD =
@@ -685,7 +724,7 @@ public class UserVisitSessionAnalyzeSpark {
 
       return new Tuple2<String, String>(sessionid, fullAggrInfo);
     });
+
     return sessionid2FullAggrInfoRDD;
   }
-
 }

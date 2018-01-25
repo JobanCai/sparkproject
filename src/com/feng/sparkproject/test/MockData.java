@@ -108,7 +108,7 @@ public class MockData {
 		Dataset<Row> df = sparkSession.createDataFrame(rowsRDD, schema);
 		
 		df.createOrReplaceTempView("user_visit_action");  
-		df.show();
+//		df.show();
 		System.out.println(df.take(1).toString());
 		/**
 		 * ==================================================================
@@ -142,7 +142,7 @@ public class MockData {
 				DataTypes.createStructField("sex", DataTypes.StringType, true)));
 		
 		Dataset<Row> df2 = sparkSession.createDataFrame(rowsRDD, schema2);
-		df2.show();
+//		df2.show();
 		System.out.println(df2.take(1).toString());
 		
 		df2.createOrReplaceTempView("user_info");  
@@ -171,7 +171,7 @@ public class MockData {
 				DataTypes.createStructField("extend_info", DataTypes.StringType, true)));
 		
 		Dataset<Row> df3 = sparkSession.createDataFrame(rowsRDD, schema3);
-		df3.show();
+//		df3.show();
 		System.out.println(df3.take(1).toString());
 		
 		df3.createOrReplaceTempView("product_info"); 

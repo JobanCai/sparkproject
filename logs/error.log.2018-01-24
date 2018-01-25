@@ -1,0 +1,18 @@
+2018-01-24 23:51:41  [ Executor task launch worker for task 8:11959 ] - [ ERROR ]  Exception in task 0.0 in stage 7.0 (TID 8)
+java.lang.NullPointerException: Value at index 6 is null
+	at org.apache.spark.sql.Row$class.getAnyValAs(Row.scala:472)
+	at org.apache.spark.sql.Row$class.getLong(Row.scala:231)
+	at org.apache.spark.sql.catalyst.expressions.GenericRow.getLong(rows.scala:165)
+	at com.feng.sparkproject.spark.session.UserVisitSessionAnalyzeSpark.lambda$6(UserVisitSessionAnalyzeSpark.java:606)
+	at org.apache.spark.api.java.JavaPairRDD$$anonfun$pairFunToScalaFun$1.apply(JavaPairRDD.scala:1043)
+	at org.apache.spark.api.java.JavaPairRDD$$anonfun$pairFunToScalaFun$1.apply(JavaPairRDD.scala:1043)
+	at scala.collection.Iterator$$anon$11.next(Iterator.scala:409)
+	at org.apache.spark.shuffle.sort.BypassMergeSortShuffleWriter.write(BypassMergeSortShuffleWriter.java:149)
+	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:96)
+	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:53)
+	at org.apache.spark.scheduler.Task.run(Task.scala:108)
+	at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:335)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+	at java.lang.Thread.run(Thread.java:748)
+2018-01-24 23:51:41  [ task-result-getter-0:12041 ] - [ ERROR ]  Task 0 in stage 7.0 failed 1 times; aborting job
