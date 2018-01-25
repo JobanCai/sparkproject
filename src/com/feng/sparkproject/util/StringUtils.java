@@ -67,6 +67,9 @@ public class StringUtils {
    */
   public static String getFieldFromConcatString(String str, String delimiter, String field) {
     String[] fields = str.split(delimiter);
+    if (fields.length<2) {
+      System.out.println("bbbbbbb"+str);
+    }
     for (String concatField : fields) {
       String fieldName = concatField.split("=")[0];
       String fieldValue = concatField.split("=")[1];

@@ -89,25 +89,25 @@ public class UserVisitSessionAnalyzeSpark {
     sessionid2AggrInfoRDD.take(20).forEach(tuple -> {
       System.out.println("sessionid2AggrInfoRDD:" + tuple._1 + ":" + tuple._2);
     });
-    //
-    // AccumulatorV2<String, String> sessionAggrStatAccumulator = new SessionAggrStatAccumulator();
-    // spark.sparkContext().register(sessionAggrStatAccumulator);
-    //
-    //
-    // // 过滤并统计
-    // JavaPairRDD<String, String> filteredSessionid2AggrInfoRDD =
-    // filterSessionAndAggrStat(sessionid2AggrInfoRDD, taskParm, sessionAggrStatAccumulator);
-    //
-    // // <sessionid,actioninfo>
-    // JavaPairRDD<String, Row> sessionid2detailRDD =
-    // getSessionid2detailRDD(filteredSessionid2AggrInfoRDD, sessionid2actionRDD);
-    //
-    // // 随机抽取并入库
-    // randomExtractSession(spark, task.getTaskid(), filteredSessionid2AggrInfoRDD,
-    // sessionid2detailRDD);
-    //
-    // // 计算出各个范围的session占比，并写入MySQL
-    // calculateAndPersistAggrStat(sessionAggrStatAccumulator.value(), task.getTaskid());
+    
+     AccumulatorV2<String, String> sessionAggrStatAccumulator = new SessionAggrStatAccumulator();
+     spark.sparkContext().register(sessionAggrStatAccumulator);
+    
+    
+     // 过滤并统计
+     JavaPairRDD<String, String> filteredSessionid2AggrInfoRDD =
+     filterSessionAndAggrStat(sessionid2AggrInfoRDD, taskParm, sessionAggrStatAccumulator);
+    
+     // <sessionid,actioninfo>
+     JavaPairRDD<String, Row> sessionid2detailRDD =
+     getSessionid2detailRDD(filteredSessionid2AggrInfoRDD, sessionid2actionRDD);
+    
+     // 随机抽取并入库
+     randomExtractSession(spark, task.getTaskid(), filteredSessionid2AggrInfoRDD,
+     sessionid2detailRDD);
+    
+     // 计算出各个范围的session占比，并写入MySQL
+     calculateAndPersistAggrStat(sessionAggrStatAccumulator.value(), task.getTaskid());
     spark.close();
   }
 
@@ -613,8 +613,8 @@ public class UserVisitSessionAnalyzeSpark {
         if (userid == null) {
           userid = row.getLong(1);
         }
-        String searchKeyword = row.getString(5);
-        Long clickCategoryId = row.getLong(6);
+        String searchKeyword = row.get(5)!=null?row.getString(5):null;
+        Long clickCategoryId = row.get(6)!=null?row.getLong(6):null;
 
         // 并不是每一行访问行为都有searchKeyword何clickCategoryId两个字段的
         // 其实，只有搜索行为，是有searchKeyword字段的
@@ -690,10 +690,8 @@ public class UserVisitSessionAnalyzeSpark {
     // 查询所有用户数据，并映射成<userid,Row>的格式
     String sql = "select * from user_info";
     JavaRDD<Row> userInfoRDD = spark.sql(sql).javaRDD();
-
     JavaPairRDD<Long, Row> userid2InfoRDD =
         userInfoRDD.mapToPair(row -> new Tuple2<Long, Row>(row.getLong(0), row));
-
     /**
      * 这里就可以说一下，比较适合采用reduce join转换为map join的方式
      * 
@@ -704,7 +702,7 @@ public class UserVisitSessionAnalyzeSpark {
     // 将session粒度聚合数据，与用户信息进行join
     JavaPairRDD<Long, Tuple2<String, Row>> userid2FullInfoRDD =
         userid2PartAggrInfoRDD.join(userid2InfoRDD);
-
+    System.out.println("userid2FullInfoRDD:"+userid2FullInfoRDD.count());
     // 对join起来的数据进行拼接，并且返回<sessionid,fullAggrInfo>格式的数据
     JavaPairRDD<String, String> sessionid2FullAggrInfoRDD = userid2FullInfoRDD.mapToPair(tuple -> {
       String partAggrInfo = tuple._2._1;
